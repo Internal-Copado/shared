@@ -153,23 +153,6 @@ ExampleKey
     ClickText                   Save                        anchor=SaveEdit
     UseModal                    Off
 
-Login_with_another_user
-    [Documentation]             Login to Salesforce instance
-    [Arguments]                 ${username}                 ${password}
-    End suite
-    Setup Browser
-    GoTo                        ${login_url}
-    TypeText                    Username                    ${username}
-    TypeText                    Password                    ${password}
-    ClickText                   Log In
-    ${isMFA}=                   IsText                      Login Approval Required     #Determines MFA is prompted
-    Log To Console              ${isMFA}
-    IF                          ${isMFA}                    #Conditional Statement for if MFA verification is required to proceed
-        ${mfa_code}=            GetOTP                      ${username}                 ${secret_hidde}             ${password}
-        TypeSecret              Code                        ${mfa_code}
-        ClickText               Verify
-    END
-
 Commonfunction
     ClickText                   Opportunities
     ClickText                   New
