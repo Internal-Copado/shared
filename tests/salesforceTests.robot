@@ -1,197 +1,118 @@
 *** Settings ***
 Library                         QForce
-Library                         String
-Library                         DateTime
-# Library                         RetryFailed    global_retries=1   keep_retried_tests=False    log_level=None
-
+Resource                        ../resources/common.robot
+Suite Setup                     Setup Browser
+Suite Teardown                  End suite
 
 *** Variables ***
-${BROWSER}                      chrome
+${copado_url}                   https://www.copado.com
 
-${home_url}                     ${login_url}/lightning/page/home
-${applauncher}                  //*[contains(@class, "appLauncher")]
+*** Test Cases ***
+Fresh Start
+    Cleanup
 
-${company}                      ExampleCorp
-${accountName}                  ExamplaryBranch
-${first}                        Demo
-${last}                         McTest
-${email}                        DTest@test.test
-${phone}                        1234567890
+Simple End To End Flow
+    [Documentation]             This is an end to end test of a customer-facing lead generating form, and Salesforce.    We enter a lead from a website, log into Salesforce, and verify the lead and status.
+    [Tags]                      E2E                         Lead Generation
+    GoTo                        https://www.copado.com/robotic-testing
+    ClickText                   Talk to Sales
 
-${demoFirst}                    Marty
-${demoLast}                     McFly
+    #Same button with class based and relative XPath
+    # ClickElement              //*[contains(@class, "nav_btn w-button")]               #Gracious Comment
+    # ClickElement              /html/body/div[2]/div/header/div[1]/div[2]/nav/ul/li[5]
 
-*** Keywords ***
-
-Setup Browser
-    Set Library Search Order    QWeb
-    Evaluate                    random.seed()
-    Open Browser                about:blank                 ${BROWSER}
-    SetConfig                   LineBreak                   ${EMPTY}                    #\ue000
-    SetConfig                   DefaultTimeout              20s                         #sometimes salesforce is slow
-    SetConfig                   CaseInsensitive             True
-
-Setup Incognito Browser
-    Set Library Search Order    QWeb
-    Evaluate                    random.seed()
-    Open Browser                about:blank                 ${BROWSER}    --incognito
-    SetConfig                   LineBreak                   ${EMPTY}                    #\ue000
-    SetConfig                   DefaultTimeout              20s                         #sometimes salesforce is slow
-    SetConfig                   CaseInsensitive             True
-
-Form Fill
-    [Documentation]             This requests a demo
     TypeText                    First Name*                 Marty
     TypeText                    Last Name*                  McFly
     TypeText                    Business Email*             delorean88@copado.com
     TypeText                    Phone*                      1234567890
     TypeText                    Company*                    Copado
-    TypeText                    Job Title*                  Sales Engineer
-    DropDown                    Country                     United States
-
-End suite
-    Close All Browsers
-
-Form fill demo
-    TypeText                    First Name*                 Marty
-    TypeText                    Last Name*                  McFly
-    TypeText                    Business Email*             delorean88@copado.com
-    TypeText                    Phone*                      1234567890
-    TypeText                    Company*                    Copado
-    DropDown                    Employee Size*              1-2,500
     TypeText                    Job Title*                  Sales Engineer
     DropDown                    Country                     Netherlands
-
-Form Fill Training
-    [Documentation]             This keyword was generated during the training and can be used to fill in the form on the copado website
-    TypeText                    First Name*                 Marty
-    TypeText                    Last Name*                  McFly
-    TypeText                    Business Email*             delorean88@copado.com
-    TypeText                    Phone*                      1234567890
-    TypeText                    Company*                    Copado
-    DropDown                    Employee Size*              1-2,500
-    TypeText                    Job Title*                  Sales Engineer
-    DropDown                    Country                     Netherlands
-
-Login
-    [Documentation]             Login to Salesforce instance
-    GoTo                        ${login_url}
-    TypeText                    Username                    ${username}
-    TypeText                    Password                    ${password}
-    ClickText                   Log In
-    ${isMFA}=                   IsText                      Verify Your Identity        #Determines MFA is prompted
-    Log To Console              ${isMFA}
-    IF                          ${isMFA}                    #Conditional Statement for if MFA verification is required to proceed
-        ${mfa_code}=            GetOTP                      ${username}                 ${MY_SECRET}                ${password}
-        TypeSecret              Code                        ${mfa_code}
-        ClickText               Verify
-    END
-
-Setup       
-    GoTo                        ${login_url}lightning/setup/SetupOneHome/home
-
-Home
-    [Documentation]             Navigate to homepage, login if needed
-    End suite
-    Setup Browser
-    # Setup Incognito Browser
-    GoTo                        ${home_url}
-    ${login_status}=            IsText                      To access this page, you have to log in to Salesforce.                              10
-    Run Keyword If              ${login_status}             Login
-    VerifyText                  Home
-
-InsertRandomValue
-    [Documentation]             This keyword accepts a character count, suffix, and prefix.
-    ...                         It then types a random string into the given field.
-    ...                         This is an example of generating dynamic data within a test
-    ...                         and how to create a keyword with optional/default arguments.
-    [Arguments]                 ${field}                    ${charCount}=5              ${prefix}=                  ${suffix}=
-    Set Library Search Order    QWeb
-    ${testRandom}=              Generate Random String      ${charCount}
-    TypeText                    ${field}                    ${prefix}${testRandom}${suffix}
-
-
-VerifyNoAccounts
-    VerifyNoText                ${accountName}              timeout=3
-
-
-DeleteData
-    [Documentation]             RunBlock to remove all data until it doesn't exist anymore
-    ClickText                   ${accountName}
-    ClickText                   Show more actions
-    ClickText                   Delete
-    VerifyText                  Are you sure you want to delete this account?
-    # ClickText                   Delete                      2
-    ClickText    Delete
-    VerifyText                  Undo
-    VerifyNoText                Undo
-    ClickText                   Accounts                    partial_match=False
-
-Cleanup                   
-    Login
-    Sleep                       3
+    Home
     LaunchApp                   Sales
-    ClickText                   Accounts
-    RunBlock                    VerifyNoAccounts            timeout=180s                exp_handler=DeleteData
-    Sleep                       3
+    ClickText                   Leads
+    VerifyText                  Recently Viewed
+    Close Intelligence View Popup
+    VerifyText                  Marty McFly
+    ClickText                   Marty McFly
+    ClickText                   Details
+    VerifyField                 Name                        Mr. Marty McFly
+    VerifyText                  We found no potential duplicates of this Lead.
 
-MFA Login
-    ${isMFA}=                   IsText                      Verify Your Identity        #Determines MFA is prompted
-    Log To Console              ${isMFA}
-    IF                          ${isMFA}                    #Conditional Statement for if MFA verification is required to proceed
-        ${mfa_code}=            GetOTP                      ${username}                 ${MY_SECRET}                ${password}
-        TypeSecret              Code                        ${mfa_code}
-        ClickText               Verify
-    END
+Anchor elements
+    [Documentation]             Example for showing the anchor possibilities
+    [Tags]                      anchor
+    GoTo                        https://www.copado.com/devops-exchange
+    ScrollText                  Featured DevOps Solutions
 
-ExampleKey
+    # Execute separately
+    VerifyText                  Get it Now                  anchor=Copado Monitoring Center
+
+Create a lead and account, convert a lead to an opportunity. 
+    [Documentation]             This is an example of entering and converting a lead.
+    [tags]                      Lead                        TE-0000001
+
+    #Verify we are home, and begin entering a new lead.
+    Home
+    LaunchApp                   Sales
+    ClickText                   Leads
+    VerifyText                  Change Status
     ClickText                   New
+
+    #Fill out form and perform data validations by attempting to save an incomplete form.
+    UseModal                    On                          #The UseModal keyword allows us to easily target only the elements on the currently active modal, and not the entire DOM structure.
+    VerifyText                  New Lead
+    Picklist                    Salutation                  Mr.
+    TypeText                    First Name                  ${first}
+    TypeText                    Last Name                   ${last}
+    ClickText                   Save                        partial_match=false
+    UseModal                    Off                         #Turn off UseModal to interact with the error notification.
+    VerifyText                  We hit a snag.
+    VerifyText                  Review the following fields
+
+    #Fill in remaining fields, save form
     UseModal                    On
-    ClickText                   Account Name
-    TypeText                    Account Name                App
-    PickList                    Account Currency            USD - U.S. Dollar
-    ClickText                   Save                        anchor=SaveEdit
+    TypeText                    Company                     ${company}
+    ClickText                   Save                        partial_match=false
+    VerifyText                  Mr. Demo McTest
     UseModal                    Off
 
-Commonfunction
+    #Verify status updates function and select converted status
+    ClickItem                   Converted
+    ClickText                   Select Converted Status
+
+    #Enter account name and convert lead
+    TypeText                    Account Name                ${accountName}
+    ClickText                   Convert                     partial_match=false
+    VerifyText                  Your lead has been converted
+    VerifyText                  ${accountName}
+    VerifyText                  ${first} ${last}
+    VerifyText                  ${company}-
+    ClickText                   Go to Leads
+    UseModal                    Off
+
+    #Verify opportunity data is correct
     ClickText                   Opportunities
-    ClickText                   New
-    UseModal                    On
-    ClickText                   Complete this field.
-    TypeText                    Close Date                  12/1/2022
+    VerifyText                  ${company}-
+    ClickText                   ${company}-
+    ClickText                   Details
+    VerifyText                  Opportunity Information
+    VerifyText                  ${company}-                 anchor=2                    # We can use index anchors.
+    VerifyText                  ExamplaryBranch             anchor=Stage                # We can also use text based anchors.
+    VerifyField                 Probability (%)             10%
+    ScrollTo                    Created By
+    ClickText                   Edit Description
+    TypeText                    Description                 Test automation helps us rapidly deliver high quality releases!
+    ClickText                   Save
+    VerifyText                  App Launcher
 
-    ClickText                   Complete this field.
-    TypeText                    *Opportunity Name           Hidde BV
-    ClickText                   Save                        partial_match=False
-    PickList                    *Stage                      Prospecting
-    ClickText                   Save                        partial_match=False
-    UseModal                    Off
+    #Cleanup Data
+    Home
+    ClickText                   Accounts
+    VerifyText                  Account Name
+    RunBlock                    VerifyNoAccounts            timeout=180s                exp_handler=DeleteData
 
-    ClickText                   View profile
-    VerifyText                  TEST ROBOT
-    ClickText                   Log Out
 
-Login As
-    [Documentation]             Login As different persona. User needs to be logged into Salesforce with Admin rights
-    ...                         before calling this keyword to change persona.
-    ...                         Example:
-    ...                         LoginAs                     Chatter Expert
-    [Arguments]                 ${persona}
-    ClickText                   Setup
-    ClickText                   Setup for current app
-    SwitchWindow                NEW
-    TypeText                    Search Setup                ${persona}                  delay=2
-    ClickText                   User                        anchor=${persona}           delay=5                     # wait for list to populate, then click
-    VerifyText                  Freeze                      timeout=45                  # this is slow, needs longer timeout
-    ClickText                   Login                       anchor=Freeze               delay=1
-
-Close Intelligence View Popup
-    [Documentation]    This keyword checks for the presence of the "Intelligence View" popup 
-    ...                by looking for the text "Check Out the Intelligence View". 
-    ...                If the popup is found within 3 seconds, it will click on the "Got It" button
-    ...                to close the popup. If the popup is not present, 
-    ...                the keyword will not perform any action.
-    ${intelligence_view}    IsText    Check Out the Intelligence View    timeout=3s
-    IF    ${intelligence_view}
-        ClickText           Got It
-    END
+Expected failure to demo self healing
+    GoTo                        https://www.copado.com/robotic-testing
+    VerifyText                  Speak to Sales              timeout=1s
